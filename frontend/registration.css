@@ -1,0 +1,617 @@
+:root {
+    --bg: #f6f7fb;
+    --white: #ffffff;
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --text: #171923;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #16a34a;
+    --shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* =========================
+   MAIN PAGE
+========================= */
+
+.registration-page {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 40% 60%;
+}
+
+/* =========================
+   LEFT SECTION
+========================= */
+
+.intro-section {
+    position: relative;
+    padding: 48px;
+
+    background:
+        radial-gradient(circle at 20% 20%,
+            rgba(79, 70, 229, 0.08),
+            transparent 35%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    border-right: 1px solid var(--border);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.brand-icon {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 10px;
+    background: var(--primary);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-icon span {
+    width: 12px;
+    height: 12px;
+
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+.intro-content {
+    max-width: 460px;
+}
+
+.eyebrow {
+    color: var(--primary);
+
+    font-size: 12px;
+    font-weight: 700;
+
+    letter-spacing: 1.5px;
+    margin-bottom: 20px;
+}
+
+.intro-content h1 {
+    font-size: clamp(42px, 5vw, 68px);
+    line-height: 1.02;
+
+    letter-spacing: -3px;
+    margin-bottom: 24px;
+}
+
+.intro-text {
+    max-width: 420px;
+
+    color: var(--muted);
+
+    font-size: 17px;
+    line-height: 1.7;
+}
+
+.security-note {
+    display: flex;
+    gap: 14px;
+
+    margin-top: 40px;
+    padding: 18px;
+
+    background: rgba(255, 255, 255, 0.8);
+
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+
+.check-icon {
+    width: 28px;
+    height: 28px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: #dcfce7;
+    color: var(--success);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-weight: 700;
+}
+
+.security-note strong {
+    font-size: 14px;
+}
+
+.security-note p {
+    margin-top: 5px;
+
+    color: var(--muted);
+
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.footer-text {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+/* =========================
+   FORM SECTION
+========================= */
+
+.form-section {
+    background: var(--white);
+
+    padding: 50px 7vw;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.form-container {
+    width: 100%;
+    max-width: 650px;
+}
+
+.form-header {
+    margin-bottom: 30px;
+}
+
+.form-label,
+.camera-label {
+    color: var(--primary);
+
+    font-size: 11px;
+    font-weight: 700;
+
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+}
+
+.form-header h2 {
+    font-size: 32px;
+
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+}
+
+.form-header>p:last-child {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+/* =========================
+   INPUTS
+========================= */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group label {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    height: 48px;
+
+    padding: 0 14px;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: #fafafa;
+    color: var(--text);
+
+    font-size: 14px;
+
+    outline: none;
+
+    transition: 0.2s ease;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    border-color: var(--primary);
+
+    background: white;
+
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
+/* =========================
+   CAMERA SECTION
+========================= */
+
+.camera-section {
+    padding: 22px;
+
+    border: 1px solid var(--border);
+    border-radius: 18px;
+
+    background: #fafafa;
+
+    margin-bottom: 20px;
+}
+
+.camera-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 16px;
+}
+
+.camera-header h3 {
+    font-size: 18px;
+}
+
+.camera-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #9ca3af;
+}
+
+.camera-status.active .status-dot {
+    background: var(--success);
+}
+
+.camera-container {
+    position: relative;
+
+    width: 100%;
+    height: 280px;
+
+    overflow: hidden;
+
+    border-radius: 14px;
+
+    background: #111827;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.camera-container video {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    display: none;
+
+    transform: scaleX(-1);
+}
+
+.camera-container.active video {
+    display: block;
+}
+
+.camera-placeholder {
+    position: absolute;
+
+    text-align: center;
+
+    color: white;
+}
+
+.camera-icon {
+    font-size: 36px;
+
+    margin-bottom: 12px;
+
+    opacity: 0.8;
+}
+
+.camera-placeholder strong {
+    display: block;
+
+    font-size: 15px;
+
+    margin-bottom: 6px;
+}
+
+.camera-placeholder p {
+    color: #9ca3af;
+
+    font-size: 12px;
+}
+
+.camera-container.active .camera-placeholder {
+    display: none;
+}
+
+/* =========================
+   FACE GUIDE
+========================= */
+
+.face-guide {
+    position: absolute;
+
+    width: 170px;
+    height: 210px;
+
+    border: 2px solid rgba(255, 255, 255, 0.75);
+
+    border-radius: 50%;
+
+    pointer-events: none;
+}
+
+/* =========================
+   CAMERA INSTRUCTIONS
+========================= */
+
+.camera-instructions {
+    display: grid;
+
+    grid-template-columns:
+        auto 1fr auto 1fr auto 1fr;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-top: 16px;
+
+    color: var(--muted);
+
+    font-size: 11px;
+}
+
+.camera-instructions span {
+    width: 22px;
+    height: 22px;
+
+    border-radius: 50%;
+
+    background: #eef2ff;
+    color: var(--primary);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-weight: 700;
+}
+
+/* =========================
+   CAMERA BUTTON
+========================= */
+
+.camera-button {
+    width: 100%;
+    height: 44px;
+
+    margin-top: 18px;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: white;
+    color: var(--text);
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.camera-button:hover {
+    border-color: var(--primary);
+
+    color: var(--primary);
+}
+
+.camera-button:disabled {
+    cursor: default;
+
+    background: #f3f4f6;
+
+    color: #9ca3af;
+
+    border-color: var(--border);
+}
+
+/* =========================
+   REGISTER BUTTON
+========================= */
+
+.register-button {
+    width: 100%;
+    height: 52px;
+
+    border: none;
+    border-radius: 11px;
+
+    background: var(--primary);
+    color: white;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    transition: 0.2s ease;
+}
+
+.register-button:hover {
+    background: var(--primary-dark);
+
+    transform: translateY(-1px);
+
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+}
+
+.register-button span {
+    font-size: 18px;
+}
+
+.register-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* =========================
+   MESSAGES
+========================= */
+
+.message {
+    min-height: 20px;
+
+    margin-top: 12px;
+
+    text-align: center;
+
+    font-size: 13px;
+}
+
+.message.success {
+    color: var(--success);
+}
+
+.message.error {
+    color: #dc2626;
+}
+
+/* =========================
+   PRIVACY TEXT
+========================= */
+
+.privacy-text {
+    margin-top: 16px;
+
+    color: #9ca3af;
+
+    font-size: 11px;
+
+    line-height: 1.5;
+
+    text-align: center;
+}
+
+/* =========================
+   RESPONSIVE - TABLET
+========================= */
+
+@media (max-width: 950px) {
+
+    .registration-page {
+        grid-template-columns: 1fr;
+    }
+
+    .intro-section {
+        display: none;
+    }
+
+    .form-section {
+        padding: 35px 20px;
+    }
+}
+
+/* =========================
+   RESPONSIVE - MOBILE
+========================= */
+
+@media (max-width: 600px) {
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .full-width {
+        grid-column: auto;
+    }
+
+    .camera-container {
+        height: 250px;
+    }
+
+    .camera-instructions {
+        grid-template-columns: auto 1fr;
+    }
+
+    .camera-instructions p {
+        margin-right: 10px;
+    }
+
+    .camera-header {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .camera-status {
+        white-space: nowrap;
+    }
+
+    .form-header h2 {
+        font-size: 28px;
+    }
+}

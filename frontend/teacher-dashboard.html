@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>FacePulse — Teacher Dashboard</title>
+
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+
+<body>
+
+    <div class="dashboard">
+
+        <!-- SIDEBAR -->
+
+        <aside class="sidebar">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    <span></span>
+                </div>
+
+                <span>FacePulse</span>
+
+            </div>
+
+
+            <nav class="navigation">
+
+                <p class="nav-label">MAIN</p>
+
+                <button class="nav-item active">
+                    <span class="nav-icon">⌂</span>
+                    Dashboard
+                </button>
+
+                <button class="nav-item">
+                    <span class="nav-icon">◉</span>
+                    Students
+                </button>
+
+                <button class="nav-item">
+                    <span class="nav-icon">✓</span>
+                    Attendance
+                </button>
+
+                <button class="nav-item">
+                    <span class="nav-icon">▣</span>
+                    Reports
+                </button>
+
+            </nav>
+
+
+            <div class="sidebar-bottom">
+
+                <div class="teacher-profile">
+
+                    <div class="avatar">
+                        T
+                    </div>
+
+                    <div>
+                        <strong>Teacher</strong>
+                        <span>Administrator</span>
+                    </div>
+
+                </div>
+
+                <button class="logout-button">
+                    Logout
+                </button>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+
+        <main class="main-content">
+
+            <!-- TOP BAR -->
+
+            <header class="topbar">
+
+                <div>
+
+                    <p class="page-label">
+                        TEACHER DASHBOARD
+                    </p>
+
+                    <h1>Good morning, Teacher</h1>
+
+                </div>
+
+                <div class="date-info">
+
+                    <span class="date-icon">◷</span>
+
+                    <div>
+                        <strong id="current-date">
+                            28 September 2026
+                        </strong>
+
+                        <span id="current-time">
+                            10:32 AM
+                        </span>
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- STAT CARDS -->
+
+            <section class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+                        <span>Total Students</span>
+                        <div class="stat-icon blue">◎</div>
+                    </div>
+
+                    <strong>60</strong>
+
+                    <p>Registered students</p>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+                        <span>Present Today</span>
+                        <div class="stat-icon green">✓</div>
+                    </div>
+
+                    <strong id="present-count">0</strong>
+
+                    <p>Students marked present</p>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+                        <span>Absent</span>
+                        <div class="stat-icon orange">○</div>
+                    </div>
+
+                    <strong id="absent-count">60</strong>
+
+                    <p>Not yet marked</p>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-top">
+                        <span>Attendance</span>
+                        <div class="stat-icon purple">%</div>
+                    </div>
+
+                    <strong id="attendance-percentage">
+                        0%
+                    </strong>
+
+                    <p>Today's attendance</p>
+
+                </div>
+
+            </section>
+
+
+            <!-- ATTENDANCE AREA -->
+
+            <section class="attendance-layout">
+
+
+                <!-- CAMERA CARD -->
+
+                <div class="camera-card">
+
+                    <div class="card-header">
+
+                        <div>
+
+                            <p class="section-label">
+                                LIVE ATTENDANCE
+                            </p>
+
+                            <h2>Classroom Camera</h2>
+
+                        </div>
+
+                        <div class="session-status" id="session-status">
+
+                            <span></span>
+                            Session inactive
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- CAMERA -->
+
+                    <div class="dashboard-camera" id="camera-container">
+
+                        <video id="attendance-camera" autoplay playsinline></video>
+
+
+                        <div class="camera-placeholder" id="camera-placeholder">
+
+                            <div class="large-camera-icon">
+                                ◉
+                            </div>
+
+                            <h3>
+                                Camera is ready
+                            </h3>
+
+                            <p>
+                                Start an attendance session
+                                to begin scanning students.
+                            </p>
+
+                        </div>
+
+
+                        <!-- FACE GUIDE -->
+
+                        <div class="scan-guide">
+
+                            <div class="scan-corner top-left"></div>
+                            <div class="scan-corner top-right"></div>
+                            <div class="scan-corner bottom-left"></div>
+                            <div class="scan-corner bottom-right"></div>
+
+                        </div>
+
+
+                        <!-- SCANNING LINE -->
+
+                        <div class="scan-line" id="scan-line"></div>
+
+                    </div>
+
+
+                    <!-- CAMERA CONTROLS -->
+
+                    <div class="camera-controls">
+
+                        <div class="camera-message">
+
+                            <span class="pulse-dot" id="pulse-dot"></span>
+
+                            <span id="camera-message">
+                                Camera inactive
+                            </span>
+
+                        </div>
+
+
+                        <button class="start-button" id="start-attendance">
+
+                            <span>▶</span>
+
+                            Start Attendance
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LIVE RESULTS -->
+
+                <div class="results-card">
+
+                    <div class="card-header">
+
+                        <div>
+
+                            <p class="section-label">
+                                TODAY
+                            </p>
+
+                            <h2>Attendance</h2>
+
+                        </div>
+
+                        <span class="student-count">
+                            <span id="result-count">0</span> present
+                        </span>
+
+                    </div>
+
+
+                    <div class="attendance-list" id="attendance-list">
+
+                        <div class="empty-state">
+
+                            <div class="empty-icon">
+                                ✓
+                            </div>
+
+                            <h3>
+                                No attendance yet
+                            </h3>
+
+                            <p>
+                                Start the attendance session
+                                and recognized students
+                                will appear here.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- RECENT ACTIVITY -->
+
+            <section class="activity-card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <p class="section-label">
+                            ACTIVITY
+                        </p>
+
+                        <h2>Recent Attendance</h2>
+
+                    </div>
+
+                    <button class="view-all">
+                        View all →
+                    </button>
+
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>Student</th>
+                                <th>Student ID</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="recent-attendance">
+
+                            <tr class="empty-row">
+
+                                <td colspan="4">
+                                    No attendance records yet.
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script src="dashboard.js"></script>
+
+</body>
+
+</html>
