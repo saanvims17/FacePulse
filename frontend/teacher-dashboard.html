@@ -38,10 +38,10 @@
                     Dashboard
                 </button>
 
-                <button class="nav-item">
+                <a class="nav-item" href="student-registration.html">
                     <span class="nav-icon">◉</span>
-                    Students
-                </button>
+                    Register Student
+                </a>
 
                 <button class="nav-item">
                     <span class="nav-icon">✓</span>
@@ -128,7 +128,7 @@
                         <div class="stat-icon blue">◎</div>
                     </div>
 
-                    <strong>60</strong>
+                    <strong id="total-students">0</strong>
 
                     <p>Registered students</p>
 
@@ -277,6 +277,14 @@
 
                             Start Attendance
 
+                        </button>
+
+                        <button class="recognize-button" id="recognize-current" disabled>
+                            ✓ Recognise Student
+                        </button>
+
+                        <button class="next-button" id="next-student" disabled>
+                            Next Student →
                         </button>
 
                     </div>

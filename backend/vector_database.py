@@ -1,9 +1,13 @@
 import faiss
 import numpy as np
+import os
 from pathlib import Path
 
 # PATH
-DATABASE_DIR = Path(__file__).parent.parent / "database"
+DATABASE_DIR = Path(os.getenv(
+    "FACEPULSE_DATABASE_DIR",
+    str(Path(__file__).parent.parent / "database")
+))
 
 FAISS_INDEX_PATH = DATABASE_DIR / "face_index.faiss"
 
@@ -63,6 +67,11 @@ class FaceVectorDatabase:
             [student_database_id],
             dtype=np.int64
         )
+
+        # One SQLite student maps to one current embedding.  Re-registration is
+        # blocked at the API level, but this keeps the FAISS mapping unambiguous
+        # for maintenance scripts as well.
+        self.index.remove_ids(student_database_id)
 
         self.index.add_with_ids(
             embedding,
@@ -125,9 +134,18 @@ class FaceVectorDatabase:
 
         if FAISS_INDEX_PATH.exists():
 
-            self.index = faiss.read_index(
-                str(FAISS_INDEX_PATH)
-            )
+            loaded_index = faiss.read_index(str(FAISS_INDEX_PATH))
+            if loaded_index.d != self.embedding_dimension:
+                raise RuntimeError(
+                    "Existing FAISS index dimension does not match the 512-D ArcFace model. "
+                    "Use the safe reset endpoint after backing up the database."
+                )
+            self.index = loaded_index
+
+    def reset(self):
+        """Safely replace the persistent index with an empty 512-D index."""
+        self.index = faiss.IndexIDMap2(faiss.IndexFlatIP(self.embedding_dimension))
+        self.save()
 
     # COUNT
     def count(self):

@@ -7,6 +7,53 @@ const message = document.getElementById("message");
 
 let cameraStream = null;
 
+const FRONTEND_URL =
+    "http://127.0.0.1:5500/student-registration.html";
+
+function describeCameraError(error) {
+    switch (error.name) {
+        case "NotAllowedError":
+        case "SecurityError":
+            return "Camera access is blocked. Use the camera icon in the address bar and set it to Allow, then reload this page.";
+        case "NotFoundError":
+            return "No camera was found. Connect a camera and try again.";
+        case "NotReadableError":
+            return "The camera is being used by another app. Close it and try again.";
+        default:
+            return "Could not access the camera. Check browser camera permissions and try again.";
+    }
+}
+
+function waitForCameraReady() {
+    if (camera.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(
+            () => reject(new Error("Camera preview did not start in time.")),
+            8000
+        );
+        camera.addEventListener("loadedmetadata", () => {
+            clearTimeout(timeout);
+            resolve();
+        }, { once: true });
+    });
+}
+
+async function requestCamera() {
+    try {
+        return await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "user" } },
+            audio: false
+        });
+    } catch (error) {
+        // A desktop camera may not support a user-facing constraint. Fall back
+        // to the browser's default camera, but do not hide permission errors.
+        if (error.name !== "OverconstrainedError") throw error;
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+}
+
 
 // ========================================
 // ENABLE CAMERA
@@ -16,16 +63,13 @@ cameraButton.addEventListener("click", async function () {
 
     try {
 
-        // Ask browser for camera permission
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: "user"
-            },
-            audio: false
-        });
+        // Ask browser for camera permission.
+        cameraStream = await requestCamera();
 
         // Connect camera stream to video element
         camera.srcObject = cameraStream;
+        await waitForCameraReady();
+        await camera.play();
 
         // Show camera
         cameraContainer.classList.add("active");
@@ -50,8 +94,7 @@ cameraButton.addEventListener("click", async function () {
 
         console.error("Camera error:", error);
 
-        message.textContent =
-            "Unable to access the camera. Please allow camera permission.";
+        message.textContent = describeCameraError(error);
 
         message.className = "message error";
     }
@@ -63,10 +106,16 @@ cameraButton.addEventListener("click", async function () {
 // STUDENT REGISTRATION
 // ========================================
 
-registrationForm.addEventListener("submit", function (event) {
+registrationForm.addEventListener("submit", async function (event) {
 
     // Prevent page refresh
     event.preventDefault();
+
+    if (window.location.protocol === "file:") {
+        message.textContent = `Open ${FRONTEND_URL} in your browser. Registration cannot call FastAPI when opened as a file.`;
+        message.className = "message error";
+        return;
+    }
 
 
     // Get student details
@@ -84,6 +133,9 @@ registrationForm.addEventListener("submit", function (event) {
 
     const section =
         document.getElementById("section").value.trim();
+
+    const replaceFace =
+        document.getElementById("replace-face").checked;
 
 
     // ====================================
@@ -114,70 +166,59 @@ registrationForm.addEventListener("submit", function (event) {
     }
 
 
-    // ====================================
-    // STUDENT DATA
-    // ====================================
+    if (!camera.videoWidth || !camera.videoHeight) {
+        message.textContent = "Camera is still starting. Please try again.";
+        message.className = "message error";
+        return;
+    }
 
-    const studentData = {
-
-        name: name,
-
-        studentId: studentId,
-
-        department: department,
-
-        year: year,
-
-        section: section
-
+    const captureFrame = async () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = camera.videoWidth;
+        canvas.height = camera.videoHeight;
+        canvas.getContext("2d").drawImage(camera, 0, 0, canvas.width, canvas.height);
+        return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
     };
 
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("student_id", studentId);
+    formData.append("department", department);
+    formData.append("year", year);
+    formData.append("section", section);
+    formData.append("replace_face", replaceFace);
+    message.textContent = "Capturing three face frames…";
+    message.className = "message";
 
-    console.log("Student registration:", studentData);
+    for (let frame = 1; frame <= 3; frame++) {
+        const blob = await captureFrame();
+        if (!blob) {
+            message.textContent = "Could not capture the camera image.";
+            message.className = "message error";
+            return;
+        }
+        formData.append("face_image", blob, `registration-${frame}.jpg`);
+        if (frame < 3) await new Promise(resolve => setTimeout(resolve, 350));
+    }
+    message.textContent = "Registering face…";
 
-
-    // ====================================
-    // TEMPORARY SUCCESS MESSAGE
-    // ====================================
-
-    message.textContent =
-        "Face registration captured successfully.";
-
-    message.className = "message success";
-
-
-    /*
-        ========================================
-        FUTURE BACKEND CONNECTION
-        ========================================
-
-        This is where we will eventually:
-
-        1. Capture multiple face frames
-        2. Send the frames to FastAPI
-        3. YOLO detects the face
-        4. Face recognition model generates
-           face embeddings
-        5. FastAPI sends student information
-           to PostgreSQL
-        6. Face embedding is stored using pgvector
-
-        Example:
-
-        Browser
-           ↓
-        Camera Frame
-           ↓
-        FastAPI
-           ↓
-        YOLO11
-           ↓
-        Face Recognition
-           ↓
-        Face Embedding
-           ↓
-        PostgreSQL + pgvector
-    */
+    try {
+        const response = await fetch("http://127.0.0.1:8000/students/register", {
+            method: "POST",
+            body: formData
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.detail || "Registration failed.");
+        }
+        message.textContent = `Registered ${payload.student.name} successfully.`;
+        message.className = "message success";
+        registrationForm.reset();
+    } catch (error) {
+        console.error("Registration error:", error);
+        message.textContent = error.message || "Could not connect to FacePulse.";
+        message.className = "message error";
+    }
 
 });
 

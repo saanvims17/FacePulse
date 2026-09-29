@@ -1,5 +1,6 @@
 # face_database.py
 import sqlite3
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -8,7 +9,10 @@ from pathlib import Path
 # DATABASE PATH
 # --------------------------------------------------
 
-DATABASE_DIR = Path(__file__).parent.parent / "database"
+DATABASE_DIR = Path(os.getenv(
+    "FACEPULSE_DATABASE_DIR",
+    str(Path(__file__).parent.parent / "database")
+))
 DATABASE_DIR.mkdir(exist_ok=True)
 
 DATABASE_PATH = DATABASE_DIR / "facepulse.db"
@@ -75,6 +79,13 @@ def initialize_database():
             FOREIGN KEY (student_id)
                 REFERENCES students(id)
         )
+    """)
+
+    # The application-level check is retained for a friendly message, while
+    # this unique index makes concurrent requests safe.
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS attendance_one_per_student_per_day
+        ON attendance(student_id, date)
     """)
 
     connection.commit()
@@ -233,29 +244,8 @@ def mark_attendance(
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
 
-    # Check if already marked today
     cursor.execute("""
-        SELECT id
-        FROM attendance
-
-        WHERE student_id = ?
-        AND date = ?
-    """, (
-        student_database_id,
-        date
-    ))
-
-    existing_record = cursor.fetchone()
-
-    if existing_record:
-
-        connection.close()
-
-        return False
-
-    # Insert attendance
-    cursor.execute("""
-        INSERT INTO attendance
+        INSERT OR IGNORE INTO attendance
         (
             student_id,
             date,
@@ -272,10 +262,11 @@ def mark_attendance(
         confidence
     ))
 
+    marked = cursor.rowcount == 1
     connection.commit()
     connection.close()
 
-    return True
+    return marked
 
 
 # --------------------------------------------------
@@ -354,6 +345,27 @@ def get_today_attendance_count():
     connection.close()
 
     return count
+
+
+def get_total_student_count():
+    connection = get_connection()
+    count = connection.execute("SELECT COUNT(*) FROM students").fetchone()[0]
+    connection.close()
+    return count
+
+
+def clear_facepulse_data():
+    """Remove FacePulse attendance and student records from the active database."""
+    connection = get_connection()
+    try:
+        cursor = connection.cursor()
+        # Attendance must be removed first because it references students.
+        cursor.execute("DELETE FROM attendance")
+        cursor.execute("DELETE FROM students")
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('students', 'attendance')")
+        connection.commit()
+    finally:
+        connection.close()
 
 
 # --------------------------------------------------

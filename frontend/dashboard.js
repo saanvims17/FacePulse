@@ -5,6 +5,12 @@
 const startButton =
     document.getElementById("start-attendance");
 
+const recognizeButton =
+    document.getElementById("recognize-current");
+
+const nextButton =
+    document.getElementById("next-student");
+
 const camera =
     document.getElementById("attendance-camera");
 
@@ -25,6 +31,9 @@ const pulseDot =
 
 const presentCount =
     document.getElementById("present-count");
+
+const totalStudentsCount =
+    document.getElementById("total-students");
 
 const absentCount =
     document.getElementById("absent-count");
@@ -56,17 +65,14 @@ let cameraStream = null;
 
 let attendanceStarted = false;
 
-let recognitionInterval = null;
-
 let isRecognizing = false;
 
 let presentStudents = 0;
 
 
-// Temporary value.
-// Later this can come from the database.
+let totalStudents = 0;
 
-const totalStudents = 60;
+let recognitionThreshold = 0.60;
 
 
 // Keep track of students already
@@ -82,6 +88,24 @@ const recognizedStudents =
 
 const API_URL =
     "http://127.0.0.1:8000";
+
+const FRONTEND_URL =
+    "http://127.0.0.1:5500/teacher-dashboard.html";
+
+
+function describeCameraError(error) {
+    switch (error.name) {
+        case "NotAllowedError":
+        case "SecurityError":
+            return "Camera access is blocked. Use the camera icon in the address bar and set it to Allow, then reload this page.";
+        case "NotFoundError":
+            return "No camera was found. Connect a camera and try again.";
+        case "NotReadableError":
+            return "The camera is being used by another app. Close it and try again.";
+        default:
+            return "Could not access the camera. Check browser camera permissions and try again.";
+    }
+}
 
 
 // ============================================================
@@ -120,6 +144,35 @@ function updateDateTime() {
 
 updateDateTime();
 
+async function loadDashboard() {
+    try {
+        const [summaryResponse, attendanceResponse, healthResponse] = await Promise.all([
+            fetch(`${API_URL}/dashboard/summary`),
+            fetch(`${API_URL}/attendance/today`),
+            fetch(`${API_URL}/health`)
+        ]);
+        if (!summaryResponse.ok || !attendanceResponse.ok || !healthResponse.ok) return;
+        const summary = await summaryResponse.json();
+        const attendance = await attendanceResponse.json();
+        const health = await healthResponse.json();
+        recognitionThreshold = health.recognition_threshold ?? recognitionThreshold;
+        totalStudents = summary.total_students;
+        presentStudents = summary.present_today;
+        updateAttendanceStats();
+        if (attendanceList) attendanceList.innerHTML = "";
+        if (recentAttendance) recentAttendance.innerHTML = "";
+        attendance.attendance.slice().reverse().forEach(record => addAttendance({
+            name: record.name,
+            id: record.student_id,
+            time: record.time
+        }, false));
+    } catch (error) {
+        console.warn("Could not load dashboard data:", error);
+    }
+}
+
+loadDashboard();
+
 
 setInterval(
     updateDateTime,
@@ -150,6 +203,9 @@ startButton.addEventListener(
     }
 );
 
+recognizeButton.addEventListener("click", recognizeFace);
+nextButton.addEventListener("click", prepareNextStudent);
+
 
 // ============================================================
 // START ATTENDANCE
@@ -157,29 +213,16 @@ startButton.addEventListener(
 
 async function startAttendance() {
 
+    if (window.location.protocol === "file:") {
+        cameraMessage.textContent =
+            `Open ${FRONTEND_URL} in your browser. The dashboard cannot call FastAPI when opened as a file.`;
+        return;
+    }
+
     try {
-        // Reset session
+        // Start a manual, one-student-at-a-time session. Existing attendance
+        // stays visible; it is stored for the whole day in SQLite.
         recognizedStudents.clear();
-
-        presentStudents = 0;
-
-        updateAttendanceStats();
-
-        // Clear previous attendance UI
-        if (attendanceList) {
-
-            attendanceList.innerHTML =
-                "";
-
-        }
-
-
-        if (recentAttendance) {
-
-            recentAttendance.innerHTML =
-                "";
-
-        }
 
         // Request camera
         cameraStream =
@@ -248,7 +291,7 @@ async function startAttendance() {
 
 
         cameraMessage.textContent =
-            "Scanning for students...";
+            "Ready for one student. Ask them to face the camera, then click Recognise Student.";
 
 
         // --------------------------------
@@ -264,51 +307,8 @@ async function startAttendance() {
             "<span>■</span> End Attendance";
 
 
-        // --------------------------------
-        // Start recognition
-        // --------------------------------
-
-        if (recognitionInterval) {
-
-            clearInterval(
-                recognitionInterval
-            );
-
-        }
-
-
-        /*
-            Capture a frame every 2 seconds.
-
-            Camera
-                ↓
-            FastAPI
-                ↓
-            Face detection / embedding
-                ↓
-            FAISS
-                ↓
-            SQLite
-                ↓
-            Attendance
-        */
-
-        recognitionInterval =
-            setInterval(
-                recognizeFace,
-                2000
-            );
-
-
-        // --------------------------------
-        // Perform first recognition
-        // immediately
-        // --------------------------------
-
-        setTimeout(
-            recognizeFace,
-            500
-        );
+        recognizeButton.disabled = false;
+        nextButton.disabled = true;
 
 
         console.log(
@@ -326,16 +326,28 @@ async function startAttendance() {
         );
 
 
-        cameraMessage.textContent =
-            "Camera permission required.";
+        cameraMessage.textContent = describeCameraError(error);
 
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
 
-        alert(
-            "Could not access the camera. Please allow camera permission."
-        );
+        recognizeButton.disabled = true;
+        nextButton.disabled = true;
 
     }
 
+}
+
+
+function prepareNextStudent() {
+    if (!attendanceStarted) return;
+
+    cameraMessage.textContent =
+        "Ready for the next student. Ask them to face the camera, then click Recognise Student.";
+    recognizeButton.disabled = false;
+    nextButton.disabled = true;
 }
 
 
@@ -424,6 +436,8 @@ async function recognizeFace() {
     isRecognizing =
         true;
 
+    recognizeButton.disabled = true;
+
 
     try {
 
@@ -458,6 +472,9 @@ async function recognizeFace() {
             console.error(
                 "Could not create image blob."
             );
+
+            cameraMessage.textContent = "Could not capture the camera frame. Click Next Student and try again.";
+            nextButton.disabled = false;
 
             return;
 
@@ -514,7 +531,9 @@ async function recognizeFace() {
 
 
             cameraMessage.textContent =
-                "Recognition error.";
+                errorData?.detail || "Recognition error. Check that FastAPI is running.";
+
+            nextButton.disabled = false;
 
             return;
 
@@ -565,12 +584,9 @@ async function recognizeFace() {
                     : 0;
 
 
-            // --------------------------------
-            // Update camera message
-            // --------------------------------
-
-            cameraMessage.textContent =
-                `✓ ${student.name} — Present`;
+            cameraMessage.textContent = result.attendance_marked
+                ? `✓ Recognised: ${student.name} — Present (${similarity.toFixed(2)})`
+                : `✓ Recognised: ${student.name} — already marked today`;
 
 
             // --------------------------------
@@ -587,11 +603,7 @@ async function recognizeFace() {
             // Add student only once
             // --------------------------------
 
-            if (
-                !recognizedStudents.has(
-                    studentKey
-                )
-            ) {
+            if (result.attendance_marked && !recognizedStudents.has(studentKey)) {
 
                 recognizedStudents.add(
                     studentKey
@@ -645,6 +657,8 @@ async function recognizeFace() {
                 `Similarity: ${similarity.toFixed(3)}`
             );
 
+            nextButton.disabled = false;
+
         }
 
 
@@ -664,12 +678,28 @@ async function recognizeFace() {
 
 
             cameraMessage.textContent =
-                `Face not recognized — ${similarity.toFixed(2)}`;
+                `Unknown: similarity ${similarity.toFixed(2)} is below the ${recognitionThreshold.toFixed(2)} threshold. Register this student first, or improve lighting and face position.`;
+
+            nextButton.disabled = false;
 
 
             console.log(
                 `Unknown face. Similarity: ${similarity.toFixed(3)}`
             );
+
+        }
+
+
+        // ====================================================
+        // MORE THAN ONE PERSON IN FRAME
+        // ====================================================
+
+        else if (result.status === "MultipleFaces") {
+
+            cameraMessage.textContent =
+                "More than one face is visible. Keep one student in frame, then click Next Student.";
+
+            nextButton.disabled = false;
 
         }
 
@@ -689,6 +719,8 @@ async function recognizeFace() {
             cameraMessage.textContent =
                 "Unable to recognize face.";
 
+            nextButton.disabled = false;
+
         }
 
     }
@@ -703,7 +735,9 @@ async function recognizeFace() {
 
 
         cameraMessage.textContent =
-            "Connection error.";
+            "Connection error. Start FastAPI on port 8000, then try again.";
+
+        nextButton.disabled = false;
 
     }
 
@@ -723,6 +757,8 @@ async function recognizeFace() {
 // ============================================================
 
 function updateAttendanceStats() {
+
+    totalStudentsCount.textContent = totalStudents;
 
     // --------------------------------
     // Present
@@ -777,13 +813,13 @@ function updateAttendanceStats() {
 // ADD ATTENDANCE TO DASHBOARD
 // ============================================================
 
-function addAttendance(student) {
+function addAttendance(student, increment = true) {
 
     // --------------------------------
     // Increase present count
     // --------------------------------
 
-    presentStudents++;
+    if (increment) presentStudents++;
 
 
     updateAttendanceStats();
@@ -937,25 +973,11 @@ function addAttendance(student) {
 // ============================================================
 
 function stopAttendance() {
-
-    // --------------------------------
-    // Stop recognition timer
-    // --------------------------------
-
-    if (recognitionInterval) {
-
-        clearInterval(
-            recognitionInterval
-        );
-
-        recognitionInterval =
-            null;
-
-    }
-
-
     isRecognizing =
         false;
+
+    recognizeButton.disabled = true;
+    nextButton.disabled = true;
 
 
     // --------------------------------
@@ -1053,19 +1075,6 @@ function stopAttendance() {
 window.addEventListener(
     "beforeunload",
     function () {
-
-        // --------------------------------
-        // Stop recognition
-        // --------------------------------
-
-        if (recognitionInterval) {
-
-            clearInterval(
-                recognitionInterval
-            );
-
-        }
-
 
         // --------------------------------
         // Stop camera

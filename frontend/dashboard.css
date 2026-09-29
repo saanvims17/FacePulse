@@ -133,6 +133,8 @@ body {
 
     cursor: pointer;
 
+    text-decoration: none;
+
     transition: 0.2s ease;
 }
 
@@ -756,6 +758,34 @@ body {
 
 .start-button.active {
     background: #dc2626;
+}
+
+.recognize-button,
+.next-button {
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.recognize-button {
+    color: white;
+    background: var(--success);
+}
+
+.next-button {
+    color: var(--primary);
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.recognize-button:disabled,
+.next-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 /* =========================

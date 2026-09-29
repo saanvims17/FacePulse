@@ -1,6 +1,7 @@
-import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
+from insightface.app.common import Face
+from insightface.utils import face_align
 
 
 class FaceEmbeddingModel:
@@ -8,7 +9,9 @@ class FaceEmbeddingModel:
     ArcFace-based face embedding generator for FacePulse.
     """
     def __init__(self):
-        # Load pretrained ArcFace model
+        # FaceAnalysis supplies the ArcFace model weights.  We intentionally do
+        # not call ``app.get``: that method invokes InsightFace's detector and
+        # would bypass the project's fine-tuned YOLO face detector.
         self.app = FaceAnalysis(
             name="buffalo_l",
             providers=["CPUExecutionProvider"]
@@ -20,87 +23,66 @@ class FaceEmbeddingModel:
             det_size=(640, 640)
         )
 
-    def get_embedding(self, image):
+        self.recognition_model = self.app.models.get("recognition")
+        if self.recognition_model is None:
+            raise RuntimeError("InsightFace ArcFace recognition model was not loaded.")
+
+        # This landmark model receives the face crop selected by YOLO. It does
+        # not perform face detection; it only aligns that already-known face
+        # before ArcFace inference.
+        self.landmark_model = self.app.models.get("landmark_3d_68")
+        if self.landmark_model is None:
+            raise RuntimeError("InsightFace landmark model was not loaded.")
+
+    def _align_yolo_crop(self, face_crop):
+        """Align a YOLO crop with landmarks before ArcFace feature extraction."""
+        height, width = face_crop.shape[:2]
+        face = Face(bbox=np.array([0, 0, width - 1, height - 1], dtype=np.float32))
+        landmarks = self.landmark_model.get(face_crop, face)[:, :2]
+
+        # Standard 68-point landmark locations: left/right eye, nose, and
+        # left/right mouth corners.  ArcFace's canonical alignment uses these
+        # five points and does not invoke another detector.
+        five_points = landmarks[[36, 45, 30, 48, 54]]
+        return face_align.norm_crop(
+            face_crop,
+            landmark=five_points,
+            image_size=self.recognition_model.input_size[0]
+        )
+
+    def get_embedding_from_crop(self, face_crop):
         """
         Generate a 512-dimensional face embedding.
 
         Parameters:
-        image: OpenCV image (BGR format)
+        face_crop: one face cropped from a YOLO bounding box (BGR format)
 
         Returns:
         numpy array of shape (512,)
         or None if no valid face is found.
         """
 
-        if image is None:
+        if face_crop is None or face_crop.size == 0:
             return None
 
-        # Detect faces
-        faces = self.app.get(image)
+        # get_feat performs ArcFace inference only.  The crop is already
+        # selected by YOLO, so InsightFace never performs detection.
+        aligned_crop = self._align_yolo_crop(face_crop)
+        embedding = self.recognition_model.get_feat(aligned_crop)
+        embedding = np.asarray(embedding, dtype=np.float32).reshape(-1)
 
-        print("Faces detected:", len(faces))
-
-        # No face
-        if len(faces) == 0:
-            print("No face detected.")
-            return None
-
-        # Multiple faces
-        if len(faces) > 1:
-            print("Multiple faces detected.")
-
-            raise ValueError(
-                "Multiple faces detected. "
-                "Please provide an image containing one face."
+        if embedding.size != 512:
+            raise RuntimeError(
+                f"Expected a 512-D ArcFace embedding, received {embedding.size}-D."
             )
 
-        # Get the first detected face
-        face = faces[0]
-
-        print(
-            "Face bounding box:",
-            face.bbox
-        )
-
-        # ArcFace embedding
-        embedding = face.embedding
-
-        print(
-            "Embedding dimension:",
-            len(embedding)
-        )
-
         # Normalize embedding
-        embedding = (
-            embedding /
-            np.linalg.norm(embedding)
-        )
+        norm = np.linalg.norm(embedding)
+        if norm == 0:
+            raise ValueError("Could not generate a usable face embedding.")
+
+        embedding = embedding / norm
 
         return embedding.astype(
             np.float32
         )
-
-# TEST
-if __name__ == "__main__":
-
-    model = FaceEmbeddingModel()
-
-    # Load test image
-    image = cv2.imread("face1.jpg")
-
-    if image is None:
-        print("Could not read face1.jpg")
-        exit()
-
-    # Generate embedding
-    embedding = model.get_embedding(image)
-
-    if embedding is None:
-        print("No face detected.")
-
-    else:
-        print("Face detected!")
-        print("Embedding shape:", embedding.shape)
-        print("Embedding dimension:", len(embedding))
-        print("Embedding:")
-        print(embedding)
